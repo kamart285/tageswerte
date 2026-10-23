@@ -36,7 +36,7 @@ var NUMKEYS = Object.keys(F);
 var PALETTE = ['#30d158','#ff9f0a','#4da3ff','#ff6482','#bf5af2','#ffd60a','#64d2ff','#ff453a','#a2845e','#5e5ce6','#8e8e93','#66d4a0'];
 
 var days = {};                 // 'YYYY-MM-DD' -> Datensatz
-var settings = { height: 185, heightSet: false, sports: DEFAULT_SPORTS.slice(), hrMax: 170, hrMaxSet: false, plan: [null, null, null, null, null, null, null] };
+var settings = { height: 185, heightSet: false, sports: DEFAULT_SPORTS.slice(), hrMax: 172, hrMaxSet: false, birth: '', plan: [null, null, null, null, null, null, null] };
 var labor = null;              // { items: [...], meds: [...] }
 var persisted = null;
 
@@ -143,9 +143,13 @@ function putDays(list){ return queue(function(){ return tx(['days'], 'readwrite'
 function delDay(k){ return queue(function(){ return tx(['days'], 'readwrite', function(t){ t.objectStore('days')['delete'](k); }); }); }
 function saveSettings(){ var s = JSON.parse(JSON.stringify(settings)); return queue(function(){ return tx(['meta'], 'readwrite', function(t){ t.objectStore('meta').put(s, 'settings'); }); }); }
 function saveLabor(){ var l = JSON.parse(JSON.stringify(labor)); return queue(function(){ return tx(['meta'], 'readwrite', function(t){ t.objectStore('meta').put(l, 'labor'); }); }); }
+function validBirth(b){ var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(b || ''); if (!m) return false; var y = +m[1], mo = +m[2], d = +m[3], t = new Date(y, mo - 1, d); return y >= 1900 && t.getMonth() === mo - 1 && t.getDate() === d && t <= new Date(); }
+function ageOf(b){ var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(b), n = new Date(), a = n.getFullYear() - +m[1]; if (n.getMonth() + 1 < +m[2] || (n.getMonth() + 1 === +m[2] && n.getDate() < +m[3])) a--; return a; }
+function hrMaxFromBirth(b){ return validBirth(b) ? Math.max(100, Math.min(230, 220 - ageOf(b))) : null; }
+function fmtBirth(b){ return b ? b.slice(8) + '.' + b.slice(5, 7) + '.' + b.slice(0, 4) : ''; }
 function normSettings(s){
   var pl = Array.isArray(s.plan) && s.plan.length === 7 ? s.plan.map(function(x){ return x == null || isNaN(+x) ? null : +x; }) : [null, null, null, null, null, null, null];
-  return { height: +s.height || 185, heightSet: !!s.heightSet, sports: s.sports.slice(), hrMax: +s.hrMax >= 100 && +s.hrMax <= 230 ? +s.hrMax : 170, hrMaxSet: !!s.hrMaxSet, plan: pl };
+  return { height: +s.height || 185, heightSet: !!s.heightSet, sports: s.sports.slice(), hrMax: +s.hrMax >= 100 && +s.hrMax <= 230 ? +s.hrMax : 172, hrMaxSet: !!s.hrMaxSet, birth: validBirth(s.birth) ? s.birth : '', plan: pl };
 }
 var ready = idb().then(function(){
   return tx(['meta','days'], 'readonly', function(t){ return { s: t.objectStore('meta').get('settings'), l: t.objectStore('meta').get('labor'), d: t.objectStore('days').getAll() }; });
@@ -187,7 +191,7 @@ function loadOfSession(s){
   }
   if (!m) return 0;
   var f = 2;
-  if (s.hr > 0){ var p = s.hr / (settings.hrMax || 170); f = p < 0.6 ? 1 : p < 0.7 ? 2 : p < 0.8 ? 3 : p < 0.9 ? 4 : 5; }
+  if (s.hr > 0){ var p = s.hr / (settings.hrMax || 172); f = p < 0.6 ? 1 : p < 0.7 ? 2 : p < 0.8 ? 3 : p < 0.9 ? 4 : 5; }
   else if (s.teA != null || s.teN != null) f = Math.min(5, 1 + Math.max(s.teA || 0, s.teN || 0));
   return Math.round(m * f);
 }
@@ -428,7 +432,7 @@ function renderHeader(){
 }
 function loadDay(k, dir){
   flushSave();
-  cur = k;
+  cur = k; if (!document.activeElement || !document.activeElement.classList.contains('pl')) renderPlan();
   var r = days[k] || {};
   NUMKEYS.forEach(function(f){ inputs[f].value = fmtField(f, r[f]); inputs[f].classList.remove('bad'); });
   noteIn.value = r.note || ''; growNote();
@@ -822,7 +826,7 @@ if (typeof Chart !== 'undefined'){
 // ---------- Daten & Einstellungen ----------
 function renderMore(){
   $('height').value = settings.height ? String(settings.height) : '';
-  $('hrMax').value = String(settings.hrMax);
+  $('hrMax').value = String(settings.hrMax); $('birth').value = fmtBirth(settings.birth); renderBirthInfo(); renderPlan();
   renderHeightInfo();
   $('sportEdit').innerHTML = settings.sports.map(function(s, i){
     return '<li data-i="' + i + '"><input type="text" value="' + esc(s) + '" data-a="name" aria-label="Name" enterkeyhint="done">'
@@ -832,6 +836,15 @@ function renderMore(){
   }).join('');
   renderStats(); renderLabor();
 }
+function renderBirthInfo(){ var h = hrMaxFromBirth(settings.birth); $('birthInfo').textContent = h ? 'Alter ' + ageOf(settings.birth) + ' · Standard-Max-Puls 220 − Alter = ' + h : 'Standard-Max-Puls: 220 − Alter'; }
+$('birth').addEventListener('change', function(){
+  var v = this.value.trim(), m = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(v), iso = m ? m[3] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2) : '';
+  if (!v){ settings.birth = ''; saveSettings(); renderBirthInfo(); toast('✓ Geburtsdatum entfernt'); return; }
+  if (!validBirth(iso)){ toast('Bitte Datum als TT.MM.JJJJ eingeben', null, true); this.value = fmtBirth(settings.birth); return; }
+  settings.birth = iso; var h = hrMaxFromBirth(iso); if (!settings.hrMaxSet && h){ settings.hrMax = h; $('hrMax').value = String(h); }
+  saveSettings(); this.value = fmtBirth(iso); renderBirthInfo(); updateComputed(); toast('✓ Geburtsdatum gespeichert');
+});
+$('birth').addEventListener('keydown', function(e){ if (e.key === 'Enter'){ e.preventDefault(); this.blur(); } });
 function renderHeightInfo(){
   var last = null; Object.keys(days).sort().forEach(function(k){ if (days[k].w != null) last = days[k].w; });
   $('heightInfo').textContent = last != null ? 'BMI bei ' + num(last, 1) + ' kg: ' + num(bmiOf(last), 1) : '';
@@ -941,7 +954,7 @@ function toCSV(){
 }
 function toJSON(){
   var o = { app: 'tageswerte', version: VERSION, exported: new Date().toISOString(),
-    settings: { height: settings.height, sports: settings.sports, hrMax: settings.hrMax, plan: settings.plan },
+    settings: { height: settings.height, sports: settings.sports, hrMax: settings.hrMax, birth: settings.birth || undefined, plan: settings.plan },
     days: Object.keys(days).sort().map(function(k){ return days[k]; }) };
   if (labor) o.labor = labor;
   return JSON.stringify(o);
@@ -1260,9 +1273,10 @@ function importText(text, opts, res){
       var st = data.settings, ch = false;
       if (Array.isArray(st.sports)) st.sports.forEach(function(s){ if (s && !settings.sports.some(function(x){ return x.toLowerCase() === String(s).toLowerCase(); })){ settings.sports.push(String(s)); ch = true; } });
       var hh = +st.height; if (!settings.heightSet && hh >= 100 && hh <= 250 && hh !== settings.height){ settings.height = hh; ch = true; }
+      if (!settings.birth && validBirth(st.birth)){ settings.birth = st.birth; ch = true; }
       var hx = +st.hrMax; if (!settings.hrMaxSet && hx >= 100 && hx <= 230 && hx !== settings.hrMax){ settings.hrMax = hx; ch = true; }
       if (Array.isArray(st.plan) && st.plan.length === 7 && settings.plan.every(function(x){ return x == null; })){ var pl = st.plan.map(function(x){ return x == null || isNaN(+x) ? null : +x; }); if (pl.some(function(x){ return x != null; })){ settings.plan = pl; ch = true; } }
-      if (ch){ saveSettings(); renderSportChips(); }
+      if (ch){ saveSettings(); renderSportChips(); renderPlan(); }
     }
     if (data && data.labor) res.labor += mergeLabor(data.labor);
     res.files++;
@@ -1403,7 +1417,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
 // ---------- Start ----------
 if (history.state) try{ history.replaceState(null, ''); }catch(e){}
 renderSportChips(); loadDay(cur); showTab(curTab);
-ready.then(function(){ renderSportChips(); if (!saveTimer) loadDay(cur); else { saveNow(); updateComputed(); } renderTab(); });
+ready.then(function(){ renderSportChips(); renderPlan(); if (!saveTimer) loadDay(cur); else { saveNow(); updateComputed(); } renderTab(); });
 
 // für Tests
 window.__tw = { version: VERSION, ready: function(){ return ready.then(function(){ return writeQ; }); }, days: function(){ return days; }, settings: function(){ return settings; }, labor: function(){ return labor; },
