@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-var VERSION = 2;
+var VERSION = 3;
 var $ = function(id){ return document.getElementById(id); };
 var DEFAULT_SPORTS = ['Squash', 'Padel', 'Boxen', 'Crosstrainer', 'WellY-Kraft', 'Laufband'];
 // Felder: t = int | dec | hm (Std:Min, gespeichert in Minuten)
@@ -284,8 +284,8 @@ try{ var lt = localStorage.getItem('tw-tab'); if (lt && ENT[lt]) curTab = lt; }c
   var h = '', nv = '';
   TABS.forEach(function(t){
     h += '<section class="view tab" id="v-' + t.id + '" data-t="' + t.id + '"><div class="ent">' + ENT[t.id]() + '</div>'
-      + '<div class="vh"><h2>Verlauf</h2></div><div class="seg rng">'
-      + '<button type="button" data-r="7">7 Tage</button><button type="button" data-r="30">30 Tage</button><button type="button" data-r="90">90 Tage</button><button type="button" data-r="all">Alle</button></div>'
+      + '<div class="vh"><h2>Verlauf</h2><span class="muted" style="font-size:12px">Tage</span></div><div class="seg rng">'
+      + '<button type="button" data-r="7">7</button><button type="button" data-r="30">30</button><button type="button" data-r="60">60</button><button type="button" data-r="90">90</button><button type="button" data-r="120">120</button><button type="button" data-r="150">150</button><button type="button" data-r="180">180</button><button type="button" data-r="210">210</button><button type="button" data-r="240">240</button><button type="button" data-r="300">300</button><button type="button" data-r="360">360</button><button type="button" data-r="all">Alle</button></div>'
       + '<div class="chs"></div><div class="vh"><h2>Letzte Einträge</h2></div><div class="vl"></div></section>';
     nv += '<button data-v="' + t.id + '" type="button"><i>' + t.ic + '</i>' + t.name + '</button>';
   });

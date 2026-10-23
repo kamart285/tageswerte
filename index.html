@@ -88,6 +88,8 @@
   .seg button.on{background:var(--acc);color:var(--accd)}
   .segG{display:grid;grid-template-columns:repeat(3,1fr)}
   .seg+.seg{margin-top:6px}
+  .rng{display:grid;grid-template-columns:repeat(6,1fr);gap:3px}
+  .rng button{font-size:13px;min-height:38px;padding:4px 0}
   .chc{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:10px 8px 8px;margin-bottom:12px}
   .chc h3{margin:0 6px 2px;font-size:15px;text-transform:uppercase;letter-spacing:.4px;color:var(--mut)}
   .chc .sum{margin:0 6px 6px;font-size:14.5px;color:var(--txt);font-weight:600}
@@ -231,7 +233,7 @@
     <h2>Laborwerte</h2>
     <div id="laborBox" class="card lab"><p class="muted" style="margin:0">Noch keine Laborwerte geladen (kommen mit der Import-Datei).</p></div>
     <button class="btn danger" id="wipe" type="button">Alle Tageswerte löschen</button>
-    <p class="muted" style="text-align:center" id="verLine">Tageswerte · v2 · funktioniert offline</p>
+    <p class="muted" style="text-align:center" id="verLine">Tageswerte · v3 · funktioniert offline</p>
   </section>
 </main>
 
