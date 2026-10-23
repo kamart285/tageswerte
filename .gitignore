@@ -1,0 +1,13 @@
+# Gesundheitsdaten gehören NIE ins Repository
+import/
+data/
+shots/
+screenshots/
+*.private.json
+tageswerte-import*.json
+tageswerte-sicherung*.json
+tageswerte-*.csv
+health_*.json
+*.xlsx
+*.pdf
+.hc_secret

@@ -122,6 +122,52 @@
   #updBar span{flex:1}
   #updBar button{background:#04172b;color:#fff;border:0;border-radius:10px;padding:8px 12px;font-weight:800}
   #installBtn{display:none;background:var(--acc);color:var(--accd);border:0;border-radius:10px;padding:7px 12px;font-weight:800;font-size:14px}
+  /* ===== v2: sechs Tabs ===== */
+  .arrow{flex:0 0 44px;height:46px;font-size:28px}
+  #todayBtn{padding:0 8px;font-size:13px;height:38px}
+  #cogBtn{flex:0 0 44px;height:46px;border-radius:14px;border:1px solid var(--line);background:var(--card);color:var(--txt);font-size:21px;padding:0}
+  #backBtn{flex:0 0 44px;height:46px;border-radius:14px;border:1px solid var(--line);background:var(--card);color:var(--txt);font-size:28px;line-height:1;font-weight:700;padding:0 0 4px}
+  .dateBox .d2{font-size:21px}
+  nav button{font-size:10.5px;padding:7px 0 9px;letter-spacing:-.1px}
+  nav button i{font-size:20px}
+  .tab{touch-action:pan-y}
+  .card.noteC{margin-top:0}
+  .g4{grid-template-columns:repeat(4,1fr)}
+  .f label{font-size:12px}
+  .sub{font-size:12.5px;color:var(--mut);margin:-2px 2px 8px}
+  .srow{flex-wrap:wrap}
+  .srow .sx{flex:1 0 100%;font-size:12.5px;color:var(--mut);margin:-2px 0 2px 4px}
+  .vh{display:flex;align-items:center;justify-content:space-between;margin:16px 2px 8px}
+  .vh h2{margin:0}
+  .vl{margin-bottom:10px}
+  .vr{display:flex;width:100%;gap:10px;align-items:baseline;text-align:left;font:inherit;font-size:14.5px;background:var(--card);border:1px solid var(--line);border-radius:12px;color:var(--txt);padding:9px 11px;margin-bottom:6px}
+  .vr .vd{flex:0 0 auto;min-width:92px;white-space:nowrap;color:var(--mut);font-weight:700;font-variant-numeric:tabular-nums}
+  .vr .vt{flex:1;min-width:0;line-height:1.3}
+  .vr.cur{border-color:var(--acc)}
+  .more{display:block;width:100%;font:inherit;font-size:15px;font-weight:700;background:none;border:1px dashed var(--line);color:var(--mut);border-radius:12px;padding:11px}
+  details{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:0 12px;margin:0 0 12px}
+  details>summary{padding:12px 0;font-weight:700;font-size:15px;list-style:none;cursor:pointer}
+  details>summary::-webkit-details-marker{display:none}
+  details>summary::before{content:"▸ ";color:var(--mut)}
+  details[open]>summary::before{content:"▾ "}
+  details[open]{padding-bottom:12px}
+  details.in{background:var(--card2);margin:6px 0}
+  details .muted{margin:0 0 8px}
+  .calc{display:block;width:100%;font:inherit;font-size:15px;font-weight:800;background:#143a1f;color:#d6ffd2;border:1px solid var(--acc);border-radius:12px;padding:11px;margin-top:10px}
+  .planG{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+  .planG label{display:block;text-align:center;font-size:12px;color:var(--mut);font-weight:700;margin-bottom:3px}
+  .planG input.num{font-size:17px;padding:8px 2px}
+  .chk{display:flex;gap:10px;align-items:center;font-size:15px;margin:2px 0 10px}
+  .chk input{width:22px;height:22px;accent-color:var(--acc)}
+  .res{font-size:14px;line-height:1.45;background:var(--card2);border-radius:12px;padding:10px 12px;margin-top:8px}
+  .res b{color:var(--acc)}
+  .res .cf{color:#ffcf6e}
+  .res ul{margin:4px 0 0;padding-left:18px}
+  .lab table{width:100%;border-collapse:collapse;font-size:14px}
+  .lab td{padding:5px 2px;border-top:1px solid var(--line);vertical-align:top}
+  .lab td.r{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .lab .rf{color:var(--mut);font-size:12.5px}
+  .whr{font-size:12.5px}
 </style>
 </head>
 <body>
@@ -135,116 +181,28 @@
     </div>
     <button type="button" id="todayBtn">Heute</button>
     <button type="button" class="arrow" id="nextDay" aria-label="Nächster Tag">›</button>
+    <button type="button" id="cogBtn" aria-label="Daten und Einstellungen">⚙</button>
   </div>
-  <div class="hdr" id="hdrOther" hidden><h1>📈 <span id="hdrTitle">Diagramme</span></h1><button id="installBtn" type="button">App installieren</button></div>
+  <div class="hdr" id="hdrOther" hidden><button type="button" id="backBtn" aria-label="Zurück">‹</button><h1><span id="hdrTitle">Daten &amp; Einstellungen</span></h1><button id="installBtn" type="button">App installieren</button></div>
 </header>
 
 <main>
-  <!-- ===== Tag ===== -->
-  <section id="v-day" class="view on">
-    <div id="dayBody">
-      <div class="card">
-        <h3><span class="ic">🩺</span>Blutdruck</h3>
-        <div class="g bp">
-          <span></span><span class="ch">Sys</span><span class="ch">Dia</span><span class="ch">Puls</span>
-          <span class="rl">Morgens</span>
-          <input class="num" data-f="mS" id="f-mS" type="text" inputmode="numeric" enterkeyhint="next" autocomplete="off" placeholder="–" aria-label="Morgens systolisch">
-          <input class="num" data-f="mD" id="f-mD" type="text" inputmode="numeric" enterkeyhint="next" autocomplete="off" placeholder="–" aria-label="Morgens diastolisch">
-          <input class="num" data-f="mP" id="f-mP" type="text" inputmode="numeric" enterkeyhint="next" autocomplete="off" placeholder="–" aria-label="Morgens Puls">
-          <span class="rl">Abends</span>
-          <input class="num" data-f="aS" id="f-aS" type="text" inputmode="numeric" enterkeyhint="next" autocomplete="off" placeholder="–" aria-label="Abends systolisch">
-          <input class="num" data-f="aD" id="f-aD" type="text" inputmode="numeric" enterkeyhint="next" autocomplete="off" placeholder="–" aria-label="Abends diastolisch">
-          <input class="num" data-f="aP" id="f-aP" type="text" inputmode="numeric" enterkeyhint="next" autocomplete="off" placeholder="–" aria-label="Abends Puls">
-        </div>
-      </div>
+  <div id="tabs"></div>
 
-      <div class="card">
-        <h3><span class="ic">⚖️</span>Gewicht</h3>
-        <div class="wrow">
-          <div class="f"><label for="f-w">Gewicht</label><div class="unitw" data-u="kg"><input class="num" data-f="w" id="f-w" type="text" inputmode="decimal" enterkeyhint="next" autocomplete="off" placeholder="–"></div></div>
-          <div class="cv" id="c-bmi"><small>BMI</small><span>–</span></div>
-        </div>
-        <div class="g g2 tend">
-          <div class="cv" id="c-wk"><small>Woche</small><span>–</span></div>
-          <div class="cv" id="c-mo"><small>Monat</small><span>–</span></div>
-        </div>
-      </div>
+  <div class="card noteC" id="noteCard">
+    <h3><span class="ic">📝</span>Sonstiges</h3>
+    <textarea id="f-note" class="txt" rows="1" autocapitalize="sentences" placeholder="z. B. Urlaub, krank, Medikament …"></textarea>
+  </div>
 
-      <div class="card">
-        <h3><span class="ic">🏋️</span>Sport<b id="c-sport"></b></h3>
-        <div id="sportRows"></div>
-        <div class="chips" id="sportChips"></div>
-      </div>
-
-      <div class="card">
-        <h3><span class="ic">👟</span>Aktivität</h3>
-        <div class="g g2">
-          <div class="f"><label for="f-steps">Schritte</label><input class="num" data-f="steps" id="f-steps" type="text" inputmode="numeric" enterkeyhint="next" autocomplete="off" placeholder="–"></div>
-          <div class="f"><label for="f-pai">PAI</label><input class="num" data-f="pai" id="f-pai" type="text" inputmode="numeric" enterkeyhint="next" autocomplete="off" placeholder="–"></div>
-        </div>
-      </div>
-
-      <div class="card">
-        <h3><span class="ic">🔥</span>Kalorien</h3>
-        <div class="g g3">
-          <div class="f"><label for="f-kOut">Verbrauch</label><input class="num" data-f="kOut" id="f-kOut" type="text" inputmode="numeric" enterkeyhint="next" autocomplete="off" placeholder="–"></div>
-          <div class="f"><label for="f-kIn">Aufnahme</label><input class="num" data-f="kIn" id="f-kIn" type="text" inputmode="numeric" enterkeyhint="next" autocomplete="off" placeholder="–"></div>
-          <div class="f"><span class="fl">Defizit</span><div class="cv" id="c-def"><span>–</span></div></div>
-        </div>
-      </div>
-
-      <div class="card">
-        <h3><span class="ic">📊</span>Belastung</h3>
-        <div class="g g3">
-          <div class="f"><label for="f-form">Trainings-Form</label><div class="formRow"><button type="button" class="pm" id="formSign" aria-label="Vorzeichen umschalten">±</button><input class="num" data-f="form" id="f-form" type="text" inputmode="numeric" enterkeyhint="next" autocomplete="off" placeholder="–"></div></div>
-          <div class="f"><label for="f-ist">Belastung IST</label><input class="num" data-f="ist" id="f-ist" type="text" inputmode="numeric" enterkeyhint="next" autocomplete="off" placeholder="–"></div>
-          <div class="f"><label for="f-soll">Belastung SOLL</label><input class="num" data-f="soll" id="f-soll" type="text" inputmode="numeric" enterkeyhint="next" autocomplete="off" placeholder="–"></div>
-        </div>
-      </div>
-
-      <div class="card">
-        <h3><span class="ic">😴</span>Schlaf</h3>
-        <div class="g g2">
-          <div class="f"><label for="f-sleep">Dauer (Std:Min)</label><input class="num" data-f="sleep" id="f-sleep" type="text" inputmode="numeric" enterkeyhint="next" autocomplete="off" placeholder="0:00"></div>
-          <div class="f"><label for="f-apnoe">Schlafapnoe</label><input class="num" data-f="apnoe" id="f-apnoe" type="text" inputmode="decimal" enterkeyhint="next" autocomplete="off" placeholder="–"></div>
-        </div>
-      </div>
-
-      <div class="card">
-        <h3><span class="ic">📝</span>Sonstiges</h3>
-        <textarea id="f-note" class="txt" rows="1" autocapitalize="sentences" placeholder="z. B. Urlaub, krank, Medikament …"></textarea>
-      </div>
-      <p class="dayFoot" id="dayFoot">Wischen ← → wechselt den Tag · alles wird automatisch gespeichert</p>
-    </div>
-  </section>
-
-  <!-- ===== Diagramme ===== -->
-  <section id="v-charts" class="view">
-    <div class="pbar">
-      <div class="seg segG" id="chSec">
-        <button type="button" data-s="bp" class="on">🩺 Blutdruck</button>
-        <button type="button" data-s="w">⚖️ Gewicht</button>
-        <button type="button" data-s="act">👟 Aktivität</button>
-        <button type="button" data-s="kcal">🔥 Kalorien</button>
-        <button type="button" data-s="load">📊 Belastung</button>
-        <button type="button" data-s="sleep">😴 Schlaf</button>
-      </div>
-      <div class="seg" id="chRange">
-        <button type="button" data-r="7">7 Tage</button>
-        <button type="button" data-r="30" class="on">30 Tage</button>
-        <button type="button" data-r="90">90 Tage</button>
-        <button type="button" data-r="all">Alle</button>
-      </div>
-    </div>
-    <div id="chBody"></div>
-    <p class="hint" id="chHint">Finger übers Diagramm ziehen zeigt die Werte · Antippen öffnet den Tag</p>
-  </section>
-
-  <!-- ===== Mehr ===== -->
+  <!-- ===== Daten & Einstellungen ===== -->
   <section id="v-more" class="view">
     <h2 style="margin-top:4px">Körpergröße (für BMI)</h2>
     <div class="card">
       <div class="hrow"><div class="unitw" data-u="cm"><input class="num" id="height" type="text" inputmode="numeric" enterkeyhint="done" autocomplete="off"></div><span class="muted" id="heightInfo"></span></div>
+    </div>
+    <h2>Max-Puls (für die Belastung)</h2>
+    <div class="card">
+      <div class="hrow"><div class="unitw" data-u="bpm"><input class="num" id="hrMax" type="text" inputmode="numeric" enterkeyhint="done" autocomplete="off"></div><span class="muted">Nur nötig, wenn eine Einheit Ø-Puls, aber keine Pulszonen hat.</span></div>
     </div>
     <h2>Sportarten</h2>
     <div class="card">
@@ -252,26 +210,31 @@
       <div class="addRow"><input id="newSport" type="text" placeholder="Neue Sportart" enterkeyhint="done" autocapitalize="words"><button type="button" id="addSport">＋ Hinzufügen</button></div>
       <p class="muted" style="margin-bottom:0">Erscheinen als Schnellauswahl beim Sport. Umbenennen ändert bereits eingetragene Tage nicht.</p>
     </div>
+    <h2>Daten laden (Import)</h2>
+    <div class="card">
+      <p class="muted" style="margin-top:0">Eine oder mehrere Dateien wählen: Sicherung dieser App (JSON), Zepp-Tagesdatei (JSON), <b>health_JJJJ-MM-TT.json</b> aus dem Drive-Ordner „Gesundheit“ oder CSV aus Excel.</p>
+      <button class="btn sec" id="impBtn" type="button">⬆ Import (Datei wählen)</button>
+      <input type="file" id="impFile" multiple accept=".json,.csv,.txt,application/json,text/csv,text/plain" style="display:none">
+      <label class="chk"><input type="checkbox" id="impOver"> Von Hand eingetragene Werte überschreiben</label>
+      <p class="muted" style="margin:0">Gleicher Tag = die Werte werden zusammengeführt, nichts doppelt. Von Hand eingetragene Werte bleiben standardmäßig unverändert (Abweichungen werden unten angezeigt). Werte aus Zepp/Health-Connect werden bei neuem Import aktualisiert.</p>
+      <div id="impRes"></div>
+    </div>
     <h2>Sicherung &amp; Export</h2>
     <div class="card">
       <p class="muted" style="margin-top:0">Die Daten liegen nur auf diesem Handy. Mach ab und zu eine Sicherung (z. B. in Google Drive), damit beim Handywechsel nichts verloren geht.</p>
-      <button class="btn sec" id="expCsv" type="button">⬇ Tabelle für Excel (CSV)</button>
       <button class="btn sec" id="expJson" type="button">⬇ Sicherung (JSON)</button>
       <button class="btn sec" id="shareJson" type="button" style="display:none">↗ Sicherung teilen (Drive, Mail …)</button>
-      <button class="btn sec" id="impBtn" type="button">⬆ Laden (Sicherung oder CSV aus Excel)</button>
-      <input type="file" id="impFile" accept=".json,.csv,application/json,text/csv,text/plain" style="display:none">
+      <button class="btn sec" id="expCsv" type="button">⬇ Tabelle für Excel (CSV)</button>
       <p class="muted" id="stats" style="margin-bottom:0"></p>
     </div>
+    <h2>Laborwerte</h2>
+    <div id="laborBox" class="card lab"><p class="muted" style="margin:0">Noch keine Laborwerte geladen (kommen mit der Import-Datei).</p></div>
     <button class="btn danger" id="wipe" type="button">Alle Tageswerte löschen</button>
-    <p class="muted" style="text-align:center">Tageswerte · v1 · funktioniert offline</p>
+    <p class="muted" style="text-align:center" id="verLine">Tageswerte · v2 · funktioniert offline</p>
   </section>
 </main>
 
-<nav>
-  <button data-v="day" class="on" type="button"><i>📅</i>Tag</button>
-  <button data-v="charts" type="button"><i>📈</i>Diagramme</button>
-  <button data-v="more" type="button"><i>⋯</i>Mehr</button>
-</nav>
+<nav id="nav"></nav>
 
 <div id="saved">✓ gespeichert</div>
 <div id="updBar"><span>Neue Version verfügbar</span><button type="button" id="updBtn">Neu laden</button></div>
