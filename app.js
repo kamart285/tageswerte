@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-var VERSION = 3;
+var VERSION = 4;
 var $ = function(id){ return document.getElementById(id); };
 var DEFAULT_SPORTS = ['Squash', 'Padel', 'Boxen', 'Crosstrainer', 'WellY-Kraft', 'Laufband'];
 // Felder: t = int | dec | hm (Std:Min, gespeichert in Minuten)
@@ -904,7 +904,11 @@ function renderLabor(){
     h += '</table></details>';
   });
   if (labor.meds && labor.meds.length){
-    h += '<details class="in"><summary>Medikation <span class="muted">(' + labor.meds.length + ')</span></summary><table>' + labor.meds.map(function(m){ return '<tr><td>' + esc(m.n) + (m.info ? '<div class="rf">' + esc(m.info) + '</div>' : '') + '</td><td class="r">' + esc(m.dosis || '') + '</td></tr>'; }).join('') + '</table></details>';
+    h += '<details class="in"><summary>Medikation <span class="muted">(' + labor.meds.length + ')</span></summary><table>' + labor.meds.map(function(m){
+      // Felder: jetzt (aktuelle Einnahme), frueher (Vorgeschichte/Status); alte Dateien: dosis/info
+      var now = m.jetzt != null ? m.jetzt : (m.dosis || ''), was = m.frueher != null ? m.frueher : (m.info || '');
+      return '<tr><td>' + esc(m.n) + '</td><td class="r">' + esc(now) + (was ? '<div class="rf">' + esc(was).replace(/\n/g, ' ') + '</div>' : '') + '</td></tr>';
+    }).join('') + '</table></details>';
   }
   box.innerHTML = h;
 }
@@ -918,7 +922,12 @@ function mergeLabor(inc){
     (it.vals || []).forEach(function(v){ if (!(ex.vals || (ex.vals = [])).some(function(e){ return e.d === v.d; })){ ex.vals.push(v); n++; } });
   });
   labor.meds = labor.meds || [];
-  (inc.meds || []).forEach(function(m){ if (m && m.n && !labor.meds.some(function(x){ return x.n === m.n; })){ labor.meds.push(m); n++; } });
+  (inc.meds || []).forEach(function(m){
+    if (!m || !m.n) return;
+    var i = -1; labor.meds.forEach(function(x, k){ if (i < 0 && x.n === m.n) i = k; });
+    if (i < 0){ labor.meds.push(m); n++; }
+    else if (JSON.stringify(labor.meds[i]) !== JSON.stringify(m)){ labor.meds[i] = m; n++; }   // bestehende Medikation aktualisieren
+  });
   if (n) saveLabor();
   return n;
 }
