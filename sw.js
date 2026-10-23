@@ -1,5 +1,5 @@
 // Tageswerte – Service Worker (offline cache, stale-while-revalidate)
-const CACHE = 'tageswerte-v4';
+const CACHE = 'tageswerte-v5';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './app.js', './chart.umd.min.js',
   './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'];
 

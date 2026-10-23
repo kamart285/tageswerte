@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-var VERSION = 4;
+var VERSION = 5;
 var $ = function(id){ return document.getElementById(id); };
 var DEFAULT_SPORTS = ['Squash', 'Padel', 'Boxen', 'Crosstrainer', 'WellY-Kraft', 'Laufband'];
 // Felder: t = int | dec | hm (Std:Min, gespeichert in Minuten)
@@ -204,7 +204,7 @@ function sollFor(k){ var r = days[k]; return r && r.soll != null ? r.soll : plan
 // ---------- Tabs (Oberfläche) ----------
 var TABS = [
   { id: 'bp', name: 'Blutdruck', ic: '🩺' }, { id: 'w', name: 'Gewicht', ic: '⚖️' }, { id: 'sp', name: 'Sport', ic: '🏋️' },
-  { id: 'sl', name: 'Schlaf', ic: '😴' }, { id: 'sc', name: 'Waage', ic: '📊' }, { id: 'bm', name: 'Maße', ic: '📏' }
+  { id: 'sl', name: 'Schlaf', ic: '😴' }, { id: 'sc', name: 'Waage', ic: '📊' }, { id: 'bm', name: 'Maße', ic: '📏' }, { id: 'lab', name: 'Labor', ic: '🩸' }
 ];
 function fi(k, label, unit, ph){
   var t = F[k].t, mode = t === 'dec' ? 'decimal' : 'numeric';
@@ -220,6 +220,7 @@ function bpRow(lbl, s, d, p){
   return '<span class="rl">' + lbl + '</span>' + bi(s, l + 'systolisch') + bi(d, l + 'diastolisch') + bi(p, l + 'Puls');
 }
 var ENT = {
+  lab: function(){ return ''; },
   bp: function(){
     return crd('🩺', 'Blutdruck', '<div class="g bp"><span></span><span class="ch">Sys</span><span class="ch">Dia</span><span class="ch">Puls</span>'
         + bpRow('Morgens', 'mS', 'mD', 'mP') + bpRow('Abends', 'aS', 'aD', 'aP') + '</div>')
@@ -283,11 +284,20 @@ try{ var lt = localStorage.getItem('tw-tab'); if (lt && ENT[lt]) curTab = lt; }c
 (function build(){
   var h = '', nv = '';
   TABS.forEach(function(t){
+    nv += '<button data-v="' + t.id + '" type="button"><i>' + t.ic + '</i>' + t.name + '</button>';
+    if (t.id === 'lab'){
+      h += '<section class="view tab" id="v-lab" data-t="lab"><div class="labTop">'
+        + '<div class="labSum" id="labSum"></div>'
+        + '<div class="labCtl"><label class="labSw"><input type="checkbox" id="labOnly"><span>Nur auffällige</span></label>'
+        + '<input type="search" id="labSearch" class="labSearch" placeholder="Suchen …" aria-label="Laborwerte suchen" enterkeyhint="search" autocomplete="off" autocapitalize="off"></div>'
+        + '<p class="labLeg"><b class="r">Rot</b> = außerhalb der Referenz · <b class="up">↑</b> besser, <b class="dn">↓</b> schlechter als die Messung davor (bezogen auf die Referenz, nicht auf die Zahl; Pfeil nur, wenn einer der beiden Werte außerhalb liegt).</p>'
+        + '</div><div id="laborBox" class="lab"></div></section>';
+      return;
+    }
     h += '<section class="view tab" id="v-' + t.id + '" data-t="' + t.id + '"><div class="ent">' + ENT[t.id]() + '</div>'
       + '<div class="vh"><h2>Verlauf</h2><span class="muted" style="font-size:12px">Tage</span></div><div class="seg rng">'
       + '<button type="button" data-r="7">7</button><button type="button" data-r="30">30</button><button type="button" data-r="60">60</button><button type="button" data-r="90">90</button><button type="button" data-r="120">120</button><button type="button" data-r="150">150</button><button type="button" data-r="180">180</button><button type="button" data-r="210">210</button><button type="button" data-r="240">240</button><button type="button" data-r="300">300</button><button type="button" data-r="360">360</button><button type="button" data-r="all">Alle</button></div>'
       + '<div class="chs"></div><div class="vh"><h2>Letzte Einträge</h2></div><div class="vl"></div></section>';
-    nv += '<button data-v="' + t.id + '" type="button"><i>' + t.ic + '</i>' + t.name + '</button>';
   });
   $('tabs').innerHTML = h; $('nav').innerHTML = nv;
 })();
@@ -456,7 +466,7 @@ $('dateBox').addEventListener('click', function(e){
 // Wischen (nicht auf Diagrammen/Listen)
 var sw = null;
 $('tabs').addEventListener('touchstart', function(e){
-  if (e.touches.length !== 1 || e.target.closest('.cw, .vl, .rng, .chs')){ sw = null; return; }
+  if (curTab === 'lab' || e.touches.length !== 1 || e.target.closest('.cw, .vl, .rng, .chs')){ sw = null; return; }
   var t = e.touches[0];
   sw = { x: t.clientX, y: t.clientY, t: Date.now(), focused: e.target === document.activeElement && /INPUT|TEXTAREA/.test(e.target.tagName) };
 }, { passive: true });
@@ -476,10 +486,10 @@ function focusNext(el){
 }
 var mainEl = document.querySelector('main');
 mainEl.addEventListener('keydown', function(e){
-  if ((e.key === 'Enter' || e.keyCode === 13) && !e.isComposing && e.target.tagName === 'INPUT' && e.target.closest('.tab, #noteCard')){ e.preventDefault(); flushSave(); saveNow(); focusNext(e.target); }
+  if ((e.key === 'Enter' || e.keyCode === 13) && !e.isComposing && e.target.tagName === 'INPUT' && e.target.closest('.tab, #noteCard') && !e.target.closest('#v-lab')){ e.preventDefault(); flushSave(); saveNow(); focusNext(e.target); }
 });
 mainEl.addEventListener('input', function(e){
-  var el = e.target; if (!el.closest('.tab, #noteCard')) return;
+  var el = e.target; if (!el.closest('.tab, #noteCard') || el.closest('#v-lab')) return;
   var f = el.getAttribute('data-f');
   if (f){
     var d = F[f], v = el.value, c;
@@ -494,7 +504,7 @@ mainEl.addEventListener('input', function(e){
   updateComputed(); scheduleSave();
 });
 mainEl.addEventListener('change', function(e){
-  var el = e.target; if (!el.closest('.tab, #noteCard')) return;
+  var el = e.target; if (!el.closest('.tab, #noteCard') || el.closest('#v-lab')) return;
   if (el.classList.contains('pl')){ readPlan(); return; }
   saveNow(); updateComputed();
 });
@@ -504,7 +514,7 @@ mainEl.addEventListener('focusout', function(e){
   if (saveTimer) saveNow();
 });
 mainEl.addEventListener('focusin', function(e){
-  var el = e.target; if (el.tagName !== 'INPUT' || !el.closest('.tab')) return;
+  var el = e.target; if (el.tagName !== 'INPUT' || !el.closest('.tab') || el.closest('#v-lab')) return;
   var v0 = el.value; if (!v0) return;
   setTimeout(function(){ if (el.value === v0 && document.activeElement === el){ try{ el.setSelectionRange(0, v0.length); }catch(_){} } }, 0);
 });
@@ -792,6 +802,7 @@ var TABF = { bp: ['mS','mD','mP','aS','aD','aP','rhr','hrAvg','hrMax','dS','dD']
 function renderTab(){
   var t = curTab, sec = $('v-' + t);
   destroyCharts();
+  if (t === 'lab'){ renderLabor(); return; }
   Array.prototype.forEach.call(sec.querySelectorAll('.rng button'), function(x){ x.className = x.getAttribute('data-r') === String(ranges[t]) ? 'on' : ''; });
   var box = sec.querySelector('.chs');
   if (typeof Chart === 'undefined') box.innerHTML = '<p class="empty">Diagramm-Modul konnte nicht geladen werden. Bitte App einmal mit Internet öffnen.</p>';
@@ -834,7 +845,7 @@ function renderMore(){
       + '<button type="button" class="mb" data-a="down" aria-label="Nach unten"' + (i === settings.sports.length - 1 ? ' disabled' : '') + '>↓</button>'
       + '<button type="button" class="mb del" data-a="del" aria-label="Löschen">🗑</button></li>';
   }).join('');
-  renderStats(); renderLabor();
+  renderStats(); renderLaborInfo();
 }
 function renderBirthInfo(){ var h = hrMaxFromBirth(settings.birth); $('birthInfo').textContent = h ? 'Alter ' + ageOf(settings.birth) + ' · Standard-Max-Puls 220 − Alter = ' + h : 'Standard-Max-Puls: 220 − Alter'; }
 $('birth').addEventListener('change', function(){
@@ -886,40 +897,153 @@ function addSport(){
 $('addSport').addEventListener('click', addSport);
 $('newSport').addEventListener('keydown', function(e){ if (e.key === 'Enter'){ e.preventDefault(); addSport(); } });
 
-// Laborwerte (nur Anzeige)
-function renderLabor(){
-  var box = $('laborBox');
-  if (!labor || !labor.items || !labor.items.length){ box.innerHTML = '<p class="muted" style="margin:0">Noch keine Laborwerte geladen (kommen mit der Import-Datei).</p>'; return; }
-  var groups = [], gm = {};
-  labor.items.forEach(function(it){ var g = it.g || 'Sonstige'; if (!gm[g]){ gm[g] = []; groups.push(g); } gm[g].push(it); });
-  var h = '<p class="muted" style="margin:0 0 8px">Nur zum Nachschlagen · ' + labor.items.length + ' Werte in ' + groups.length + ' Gruppen. Gruppe antippen.</p>';
-  groups.forEach(function(g){
-    h += '<details class="in"><summary>' + esc(g) + ' <span class="muted">(' + gm[g].length + ')</span></summary><table>';
-    gm[g].forEach(function(it){
-      var vals = (it.vals || []).slice().sort(function(a, c){ return a.d < c.d ? -1 : 1; }), l = vals[vals.length - 1];
-      h += '<tr><td>' + esc(it.n) + (it.ref ? '<div class="rf">Ref. ' + esc(it.ref) + '</div>' : '') + (it.info ? '<div class="rf">' + esc(it.info) + '</div>' : '') + '</td>'
-        + '<td class="r">' + (l ? '<b>' + esc(l.v) + '</b> ' + esc(it.u || '') + '<div class="rf">' + esc(fmtDate(l.d)) + '</div>' : '–') + '</td></tr>';
-      if (vals.length > 1) h += '<tr><td colspan="2" class="rf" style="border-top:0;padding-top:0">' + vals.slice(0, -1).reverse().map(function(v){ return esc(fmtDate(v.d)) + ': ' + esc(v.v); }).join(' · ') + '</td></tr>';
-    });
-    h += '</table></details>';
+// ---------- Labor (Reiter) ----------
+// Referenz lesen: "< 39.0", "<4", "> 5,38", "70 - 120", "3,9 - 10,2", "< 30 - 40" (= bis 40), "> 80 -90" (= ab 80),
+// "< 5,7 5,7 > 6,5 > 6,5" (erster Teil zählt). Alles andere / leer = keine Prüfung.
+function labNum(x){ return parseFloat(String(x).replace(',', '.')); }
+function parseRef(ref){
+  var s = String(ref == null ? '' : ref).replace(/\s+/g, ' ').trim(); if (!s) return null;
+  var N = '(\\d+(?:[.,]\\d+)?)', m = new RegExp('^([<>]=?|≤|≥)\\s*' + N + '(?:\\s*[-–]\\s*' + N + ')?').exec(s), r;
+  if (m){
+    var a = labNum(m[2]), b = m[3] != null ? labNum(m[3]) : null;
+    r = m[1].charAt(0) === '<' || m[1] === '≤' ? { lo: null, hi: b != null ? Math.max(a, b) : a } : { lo: b != null ? Math.min(a, b) : a, hi: null };
+  } else {
+    m = new RegExp('^' + N + '\\s*[-–]\\s*' + N).exec(s); if (!m) return null;
+    r = { lo: labNum(m[1]), hi: labNum(m[2]) };
+    if (r.lo > r.hi){ var t = r.lo; r.lo = r.hi; r.hi = t; }
+  }
+  r.rest = s.slice(m[0].length).trim();   // Rest = mehrstufige Angabe (nur erster Teil wird geprüft)
+  return r;
+}
+// Zahl aus einem Messwert: 46, "52,7 (52,9)", "270 (38,5)", "161 (26%)". Bei „Anzahl (Index/Prozent)“ zählt die Zahl in Klammern.
+function labValNum(it, v){
+  if (typeof v === 'number') return isNaN(v) ? null : v;
+  var m = /^\s*(-?\d+(?:[.,]\d+)?)\s*(?:\(\s*(-?\d+(?:[.,]\d+)?)\s*%?\s*\))?\s*$/.exec(String(v));
+  if (!m) return null;
+  var a = labNum(m[1]), b = m[2] != null ? labNum(m[2]) : null;
+  if (b != null && !/^AHI/i.test(it.n || '') && (/^(%|pro Stunde|Teil von AHI)$/i.test((it.u || '').trim()) || /Index/i.test(it.n || ''))) return b;
+  return a;
+}
+function labOut(ref, x){ return !!ref && x != null && ((ref.lo != null && x < ref.lo) || (ref.hi != null && x > ref.hi)); }
+// Abstand zur Norm: <= 1 innerhalb, > 1 außerhalb (Mitte = 0 bei von-bis; bei „<“, „>“ und „0 - x“ je kleiner/größer = besser)
+function labScore(ref, x){
+  if (ref.lo != null && ref.hi != null && ref.lo !== 0){ var hw = (ref.hi - ref.lo) / 2; return Math.abs(x - (ref.lo + ref.hi) / 2) / hw; }
+  if (ref.hi != null) return ref.hi ? x / ref.hi : (x > 0 ? 9 : 0);
+  return x > 0 ? ref.lo / x : 99;
+}
+// 'up' = besser, 'down' = schlechter (nur bezogen auf Referenz, nicht auf die Zahlenrichtung), null = kein Pfeil
+function labArrow(ref, xp, xc){
+  if (!ref || xp == null || xc == null) return null;
+  var op = labOut(ref, xp), oc = labOut(ref, xc);
+  if (!op && !oc) return null;
+  if (Math.abs(xc - xp) < 0.02 * Math.max(Math.abs(xp), Math.abs(xc), 1e-9)) return null;
+  var d = labScore(ref, xp) - labScore(ref, xc);
+  if (Math.abs(d) < 0.02) return null;
+  return d > 0 ? 'up' : 'down';
+}
+function labEval(it){
+  var ref = parseRef(it.ref);
+  var vals = (it.vals || []).slice().sort(function(a, c){ return a.d < c.d ? -1 : a.d > c.d ? 1 : 0; }).map(function(v){
+    var x = labValNum(it, v.v); return { d: v.d, v: v.v, x: x, bad: labOut(ref, x) };
   });
-  if (labor.meds && labor.meds.length){
-    h += '<details class="in"><summary>Medikation <span class="muted">(' + labor.meds.length + ')</span></summary><table>' + labor.meds.map(function(m){
+  var n = vals.length, ar = n > 1 ? labArrow(ref, vals[n - 2].x, vals[n - 1].x) : null;
+  return { it: it, ref: ref, vals: vals, latest: n ? vals[n - 1] : null, arrow: ar };
+}
+function labFmt(v){ return typeof v === 'number' ? esc(String(v).replace('.', ',')) : esc(v); }
+function labStats(){
+  var st = { items: 0, vals: 0, badLatest: 0, badOld: 0, up: 0, down: 0, noRef: 0, partialRef: 0, badItems: [], upItems: [], downItems: [] };
+  ((labor && labor.items) || []).forEach(function(it){
+    var e = labEval(it); st.items++; st.vals += e.vals.length;
+    if (!e.ref) st.noRef++; else if (e.ref.rest) st.partialRef++;
+    e.vals.forEach(function(v, i){ if (v.bad){ if (i === e.vals.length - 1){ st.badLatest++; st.badItems.push(it.n); } else st.badOld++; } });
+    if (e.arrow === 'up'){ st.up++; st.upItems.push(it.n); } else if (e.arrow === 'down'){ st.down++; st.downItems.push(it.n); }
+  });
+  return st;
+}
+var labOpen = {};
+function renderLabor(){
+  var box = $('laborBox'), sum = $('labSum');
+  if (!labor || !labor.items || !labor.items.length){
+    sum.textContent = ''; box.innerHTML = '<p class="muted" style="margin:14px 2px">Noch keine Laborwerte geladen (kommen mit der Import-Datei: ⚙ → Import).</p>'; return;
+  }
+  var only = $('labOnly').checked, q = $('labSearch').value.trim().toLowerCase(), st = labStats();
+  sum.innerHTML = '<b>' + st.items + '</b> Parameter · <b>' + st.vals + '</b> Werte · <span class="' + (st.badLatest ? 'r' : '') + '"><b>' + st.badLatest + '</b> aktuell auffällig</span>';
+  var groups = [], gm = {};
+  labor.items.forEach(function(it){ var g = it.g && it.g !== 'Keine Gruppe' ? it.g : 'Ohne Gruppe'; if (!gm[g]){ gm[g] = []; groups.push(g); } gm[g].push(it); });
+  var h = '', shown = 0;
+  groups.forEach(function(g){
+    var list = gm[g].map(labEval);
+    var nBad = list.filter(function(e){ return e.latest && e.latest.bad; }).length;
+    var gHit = q && g.toLowerCase().indexOf(q) >= 0;
+    var vis = list.filter(function(e){
+      if (only && !(e.latest && e.latest.bad)) return false;
+      return !q || gHit || (e.it.n || '').toLowerCase().indexOf(q) >= 0;
+    });
+    if (!vis.length) return;
+    shown += vis.length;
+    var open = (q || only) ? true : (labOpen[g] != null ? labOpen[g] : nBad > 0);
+    h += '<details class="lg" data-g="' + esc(g) + '"' + (open ? ' open' : '') + '><summary>' + esc(g) + ' <span class="muted">(' + gm[g].length + ')</span>'
+      + (nBad ? ' <span class="gb">' + nBad + ' auffällig</span>' : '') + '</summary>';
+    vis.forEach(function(e){
+      var it = e.it, l = e.latest, n = e.vals.length;
+      h += '<div class="li' + (l && l.bad ? ' bad' : '') + '" data-n="' + esc(it.n) + '"><div class="lr"><div class="ln">' + esc(it.n)
+        + (it.ref ? '<div class="rf">Ref. ' + esc(it.ref) + '</div>' : '') + (it.info ? '<div class="rf">' + esc(it.info) + '</div>' : '') + '</div>'
+        + '<div class="lc">' + (l ? '<span class="lv' + (l.bad ? ' bad' : '') + '">' + labFmt(l.v) + '</span>'
+          + (e.arrow ? '<span class="ar ' + (e.arrow === 'up' ? 'up' : 'dn') + '" role="img" aria-label="' + (e.arrow === 'up' ? 'besser geworden' : 'schlechter geworden') + '">' + (e.arrow === 'up' ? '↑' : '↓') + '</span>' : '')
+          + (it.u ? ' <span class="lu">' + esc(it.u) + '</span>' : '') + '<div class="rf">' + esc(fmtDate(l.d)) + '</div>' : '–') + '</div></div>';
+      if (n > 1) h += '<div class="lo">' + e.vals.slice(0, -1).reverse().map(function(v){
+        return '<span class="ov' + (v.bad ? ' bad' : '') + '"><i>' + esc(fmtDate(v.d)) + '</i> ' + labFmt(v.v) + '</span>'; }).join('') + '</div>';
+      h += '</div>';
+    });
+    h += '</details>';
+  });
+  if (!shown) h = '<p class="muted" style="margin:14px 2px">' + (only && !q ? 'Aktuell ist kein Wert auffällig.' : 'Nichts gefunden.') + '</p>';
+  if (labor.meds && labor.meds.length && !q && !only){
+    h = '<details class="lg" data-g="__med"' + (labOpen.__med ? ' open' : '') + '><summary>Medikation <span class="muted">(' + labor.meds.length + ')</span></summary><table>' + labor.meds.map(function(m){
       // Felder: jetzt (aktuelle Einnahme), frueher (Vorgeschichte/Status); alte Dateien: dosis/info
       var now = m.jetzt != null ? m.jetzt : (m.dosis || ''), was = m.frueher != null ? m.frueher : (m.info || '');
       return '<tr><td>' + esc(m.n) + '</td><td class="r">' + esc(now) + (was ? '<div class="rf">' + esc(was).replace(/\n/g, ' ') + '</div>' : '') + '</td></tr>';
-    }).join('') + '</table></details>';
+    }).join('') + '</table></details>' + h;
   }
   box.innerHTML = h;
 }
+function renderLaborInfo(){
+  var n = labor && labor.items ? labor.items.length : 0;
+  $('laborInfo').textContent = n ? n + ' Parameter und die Medikation findest du jetzt im Reiter „Labor“ (unten rechts). Neue Werte kommen mit der Import-Datei.' : 'Laborwerte und Medikation stehen im Reiter „Labor“ (unten rechts). Sie kommen mit der Import-Datei.';
+}
+$('laborBox').addEventListener('click', function(e){
+  var sm = e.target.closest('summary'); if (!sm) return;
+  var d = sm.parentNode; if (!d.classList.contains('lg') || $('labOnly').checked || $('labSearch').value.trim()) return;
+  setTimeout(function(){ labOpen[d.getAttribute('data-g')] = d.open; }, 0);
+});
+$('labOnly').addEventListener('change', renderLabor);
+$('labSearch').addEventListener('input', renderLabor);
+$('labSearch').addEventListener('keydown', function(e){ if (e.key === 'Enter'){ e.preventDefault(); this.blur(); } });
+$('toLab').addEventListener('click', function(){ closeMore('lab'); });
+function labKey(x){ return (x.n || '') + '\u0001' + (x.g || '') + '\u0001' + (x.u || ''); }
 function mergeLabor(inc){
   if (!inc || !Array.isArray(inc.items)) return 0;
   var n = 0; labor = labor || { items: [], meds: [] };
+  var byNG = {};
   inc.items.forEach(function(it){
     if (!it || !it.n) return;
-    var ex = labor.items.filter(function(x){ return x.n === it.n && (x.g || '') === (it.g || ''); })[0];
+    (byNG[it.n + '\u0001' + (it.g || '')] = byNG[it.n + '\u0001' + (it.g || '')] || []).push(it);
+    // gleicher Name UND gleiche Einheit = derselbe Parameter (v4 hat z. B. Haematokrit in % und in l/l fälschlich zusammengeführt)
+    var ex = labor.items.filter(function(x){ return labKey(x) === labKey(it); })[0];
     if (!ex){ labor.items.push(JSON.parse(JSON.stringify(it))); n += (it.vals || []).length; return; }
     (it.vals || []).forEach(function(v){ if (!(ex.vals || (ex.vals = [])).some(function(e){ return e.d === v.d; })){ ex.vals.push(v); n++; } });
+  });
+  // Reparatur: Werte, die im Import zu einem Parameter mit anderer Einheit gehören, wieder aus dem falschen Parameter entfernen
+  labor.items.forEach(function(ex){
+    var sibs = (byNG[ex.n + '\u0001' + (ex.g || '')] || []).filter(function(f){ return labKey(f) !== labKey(ex); });
+    if (!sibs.length || !ex.vals) return;
+    var own = (byNG[ex.n + '\u0001' + (ex.g || '')] || []).filter(function(f){ return labKey(f) === labKey(ex); })[0];
+    var keep = ex.vals.filter(function(v){
+      var isOwn = own && (own.vals || []).some(function(o){ return o.d === v.d && o.v === v.v; });
+      var isSib = sibs.some(function(f){ return (f.vals || []).some(function(o){ return o.d === v.d && o.v === v.v; }); });
+      return isOwn || !isSib;
+    });
+    if (keep.length !== ex.vals.length){ n += ex.vals.length - keep.length; ex.vals = keep; }
   });
   labor.meds = labor.meds || [];
   (inc.meds || []).forEach(function(m){
@@ -1350,7 +1474,8 @@ function renderStats(){
 // ---------- Navigation ----------
 var curView = curTab, moreOpen = false;
 function setHeader(more){
-  $('hdrDay').hidden = more; $('hdrOther').hidden = !more;
+  var lab = !more && curTab === 'lab';
+  $('hdrDay').hidden = more || lab; $('hdrLab').hidden = !lab; $('hdrOther').hidden = !more;
   $('hdrTitle').textContent = 'Einstellungen';
 }
 function showTab(t){
@@ -1362,7 +1487,8 @@ function showTab(t){
   $('v-more').className = 'view';
   Array.prototype.forEach.call(document.querySelectorAll('#nav button'), function(x){ x.className = x.getAttribute('data-v') === t ? 'on' : ''; });
   setHeader(false);
-  $('v-' + t).querySelector('.ent').appendChild($('noteCard'));
+  var entEl = $('v-' + t).querySelector('.ent'); if (entEl) entEl.appendChild($('noteCard'));
+  $('noteCard').hidden = t === 'lab';
   renderHeader(); updateComputed(); renderTab();
   window.scrollTo(0, 0);
 }
@@ -1386,6 +1512,7 @@ function closeMore(t){
 }
 window.addEventListener('popstate', function(){ if (curView === 'more') showTab(curTab); });
 $('cogBtn').addEventListener('click', openMore);
+$('cogBtn2').addEventListener('click', openMore);
 $('backBtn').addEventListener('click', function(){ closeMore(); });
 $('nav').addEventListener('click', function(e){
   var b = e.target.closest('button[data-v]'); if (!b) return;
@@ -1429,7 +1556,7 @@ renderSportChips(); loadDay(cur); showTab(curTab);
 ready.then(function(){ renderSportChips(); renderPlan(); if (!saveTimer) loadDay(cur); else { saveNow(); updateComputed(); } renderTab(); });
 
 // für Tests
-window.__tw = { version: VERSION, ready: function(){ return ready.then(function(){ return writeQ; }); }, days: function(){ return days; }, settings: function(){ return settings; }, labor: function(){ return labor; },
+window.__tw = { version: VERSION, ready: function(){ return ready.then(function(){ return writeQ; }); }, days: function(){ return days; }, settings: function(){ return settings; }, labor: function(){ return labor; }, labStats: labStats, labEval: labEval, labParseRef: parseRef, labValNum: labValNum, labArrow: labArrow,
   cur: function(){ return cur; }, tab: function(){ return curTab; }, view: function(){ return curView; }, showTab: showTab, openMore: openMore, loadDay: loadDay, renderTab: renderTab,
   toCSV: toCSV, toJSON: toJSON, importText: function(t, o){ return importText(t, o).then(function(r){ loadDay(cur); renderTab(); return r; }); }, importFiles: importFiles,
   parseHM: parseHM, parseNumber: parseNumber, bmi: bmiOf, loadOfSession: loadOfSession, dayLoad: dayLoad, sollFor: sollFor,
