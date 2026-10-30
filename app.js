@@ -1,6 +1,12 @@
 (function(){
 'use strict';
-var VERSION = 5;
+var VERSION = 6;
+// ===== KONFIGURATION „Aus Drive holen“ (v6) =====
+// OAuth-Client-ID (Typ „Webanwendung“) aus der Google Cloud Console eintragen.
+// Eine Client-ID ist kein Geheimnis (sie steht bei jeder Web-App öffentlich im Code).
+// KEIN Client-Secret, keine Webhook-Adresse, keine Ordner-ID hier eintragen!
+var DRIVE_CLIENT_ID = '935462354626-adt63mpav2mrjn8afv43greiuun3u3gt.apps.googleusercontent.com';
+var DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
 var $ = function(id){ return document.getElementById(id); };
 var DEFAULT_SPORTS = ['Squash', 'Padel', 'Boxen', 'Crosstrainer', 'WellY-Kraft', 'Laufband'];
 // Felder: t = int | dec | hm (Std:Min, gespeichert in Minuten)
@@ -1457,6 +1463,103 @@ $('impFile').addEventListener('change', function(){
     loadDay(cur); renderMore(); renderSportChips(); renderTab();
   });
 });
+
+// ---------- v6: Aus Google Drive holen (nur Browser, kein Server) ----------
+// Gespeichert in meta/'drive' (eigener Schlüssel, IndexedDB bleibt Version 1):
+// { folder, last: ISO, n, latest: 'YYYY-MM-DD', seen: { fileId: modifiedTime } }
+var drive = { folder: '', last: null, n: 0, latest: null, seen: {} };
+var driveTok = null, driveTokExp = 0, driveBusy = false;
+ready.then(function(){ return tx(['meta'], 'readonly', function(t){ return t.objectStore('meta').get('drive'); }); })
+  .then(function(rq){ var v = rq && rq.result; if (v && typeof v === 'object'){ drive.folder = v.folder || ''; drive.last = v.last || null; drive.n = +v.n || 0; drive.latest = v.latest || null; drive.seen = v.seen && typeof v.seen === 'object' ? v.seen : {}; } renderDrive(); })
+  .catch(function(){ renderDrive(); });
+function saveDrive(){ var v = JSON.parse(JSON.stringify(drive)); return queue(function(){ return tx(['meta'], 'readwrite', function(t){ t.objectStore('meta').put(v, 'drive'); }); }); }
+function folderIdOf(v){ v = String(v || '').trim(); var m = v.match(/folders\/([A-Za-z0-9_-]{10,})/) || v.match(/[?&]id=([A-Za-z0-9_-]{10,})/); if (m) return m[1]; return /^[A-Za-z0-9_-]{10,}$/.test(v) ? v : ''; }
+function driveConfigured(){ return DRIVE_CLIENT_ID && DRIVE_CLIENT_ID.indexOf('HIER_') !== 0; }
+function driveStatus(){
+  if (!drive.last) return drive.folder ? 'Noch nicht geholt.' : 'Ordner einmal eintragen, dann „Aus Drive holen“ tippen.';
+  var t = new Date(drive.last), ts = ('0' + t.getDate()).slice(-2) + '.' + ('0' + (t.getMonth() + 1)).slice(-2) + '. ' + ('0' + t.getHours()).slice(-2) + ':' + ('0' + t.getMinutes()).slice(-2);
+  return drive.n + ' ' + (drive.n === 1 ? 'Tag' : 'Tage') + ' geholt' + (drive.latest ? ', zuletzt ' + drive.latest.slice(8) + '.' + drive.latest.slice(5, 7) + '.' : '') + ' · Abruf ' + ts;
+}
+function renderDrive(){
+  if (!$('driveFolder')) return;
+  if (document.activeElement !== $('driveFolder')) $('driveFolder').value = drive.folder;
+  $('driveInfo').textContent = driveConfigured() ? driveStatus() : 'Noch nicht eingerichtet (Google-Zugang fehlt).';
+  $('driveQuick').hidden = !drive.folder;
+  $('driveQuickInfo').textContent = drive.latest ? 'zuletzt ' + drive.latest.slice(8) + '.' + drive.latest.slice(5, 7) + '.' : '';
+}
+function loadGis(){
+  if (window.google && google.accounts && google.accounts.oauth2) return Promise.resolve();
+  return new Promise(function(res, rej){
+    var s = document.createElement('script'); s.src = 'https://accounts.google.com/gsi/client'; s.async = true;
+    s.onload = function(){ res(); }; s.onerror = function(){ rej(new Error('Google-Anmeldung nicht erreichbar (offline?)')); };
+    document.head.appendChild(s);
+  });
+}
+function driveToken(){
+  if (driveTok && Date.now() < driveTokExp - 60000) return Promise.resolve(driveTok);
+  return loadGis().then(function(){ return new Promise(function(res, rej){
+    var c = google.accounts.oauth2.initTokenClient({ client_id: DRIVE_CLIENT_ID, scope: DRIVE_SCOPE,
+      callback: function(r){ if (r && r.access_token){ driveTok = r.access_token; driveTokExp = Date.now() + (+r.expires_in || 3600) * 1000; res(driveTok); } else rej(new Error('Anmeldung abgebrochen' + (r && r.error ? ' (' + r.error + ')' : ''))); },
+      error_callback: function(e){ rej(new Error(e && e.type === 'popup_closed' ? 'Anmeldefenster geschlossen' : 'Anmeldung fehlgeschlagen')); } });
+    c.requestAccessToken({ prompt: '' });
+  }); });
+}
+function gget(url, tok){
+  return fetch(url, { headers: { Authorization: 'Bearer ' + tok } }).then(function(r){
+    if (r.status === 401){ driveTok = null; throw new Error('Google-Anmeldung abgelaufen – bitte nochmal tippen'); }
+    if (r.status === 404) throw new Error('Ordner nicht gefunden – Ordner-ID prüfen');
+    if (!r.ok) throw new Error('Drive-Fehler ' + r.status);
+    return r;
+  });
+}
+function driveList(tok){
+  var all = [], q = "'" + drive.folder + "' in parents and name contains 'health_' and trashed = false";
+  function page(pt){
+    var u = 'https://www.googleapis.com/drive/v3/files?pageSize=1000&fields=' + encodeURIComponent('nextPageToken,files(id,name,modifiedTime)') + '&q=' + encodeURIComponent(q) + (pt ? '&pageToken=' + encodeURIComponent(pt) : '');
+    return gget(u, tok).then(function(r){ return r.json(); }).then(function(j){ all = all.concat(j.files || []); return j.nextPageToken ? page(j.nextPageToken) : all; });
+  }
+  return page(null).then(function(fs){ return fs.filter(function(f){ return /^health_\d{4}-\d{2}-\d{2}\.json$/.test(f.name); }).sort(function(a, b){ return a.name < b.name ? -1 : 1; }); });
+}
+function driveSync(){
+  if (driveBusy) return Promise.resolve();
+  if (!driveConfigured()){ toast('Google-Zugang ist noch nicht eingerichtet', null, true); return Promise.resolve(); }
+  if (!drive.folder){ $('cogBtn').click(); toast('Bitte zuerst den Drive-Ordner eintragen', null, true); return Promise.resolve(); }
+  driveBusy = true; $('driveBtn').disabled = true; $('driveInfo').textContent = 'Verbinde mit Google …';
+  var over = $('impOver').checked, res = newRes(), got = 0, fresh = 0;
+  return driveToken().then(function(tok){
+    $('driveInfo').textContent = 'Suche Tagesdateien …';
+    return driveList(tok).then(function(files){
+      var todo = files.filter(function(f){ return over || drive.seen[f.id] !== f.modifiedTime; });
+      return todo.reduce(function(p, f, i){ return p.then(function(){
+        $('driveInfo').textContent = 'Lade ' + (i + 1) + ' / ' + todo.length + ' …';
+        return gget('https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(f.id) + '?alt=media', tok).then(function(r){ return r.text(); })
+          .then(function(t){ return importText(t, { over: over, fileDate: fileDateOf(f.name) }, res); })
+          .then(function(){ drive.seen[f.id] = f.modifiedTime; fresh++; })
+          .catch(function(e){ res.errors.push({ name: f.name, msg: e.message || String(e) }); });
+      }); }, Promise.resolve()).then(function(){
+        got = files.length;
+        drive.last = new Date().toISOString(); drive.n = got;
+        if (files.length) drive.latest = fileDateOf(files[files.length - 1].name);
+        return saveDrive();
+      });
+    });
+  }).then(function(){
+    $('driveRes').innerHTML = fresh ? resultHTML(res) : '<div class="res">Keine neuen Dateien seit dem letzten Abruf.</div>';
+    toast(fresh ? '✓ Drive: ' + res.added + ' neu, ' + res.updated + ' ergänzt' : '✓ Drive: nichts Neues');
+    loadDay(cur); renderMore(); renderSportChips(); renderTab();
+  }).catch(function(e){
+    $('driveRes').innerHTML = '<div class="res"><div class="warn">' + esc(e.message || String(e)) + '</div></div>';
+    toast(e.message || 'Drive-Abruf fehlgeschlagen', null, true);
+  }).then(function(){ driveBusy = false; $('driveBtn').disabled = false; renderDrive(); });
+}
+$('driveFolder').addEventListener('change', function(){
+  var v = this.value.trim(), id = v ? folderIdOf(v) : '';
+  if (v && !id){ toast('Das ist keine gültige Ordner-ID / kein Ordner-Link', null, true); this.value = drive.folder; return; }
+  if (id !== drive.folder){ drive.folder = id; drive.seen = {}; drive.last = null; drive.n = 0; drive.latest = null; saveDrive(); }
+  this.value = id; renderDrive(); toast(id ? '✓ Ordner gespeichert' : '✓ Ordner entfernt');
+});
+$('driveBtn').addEventListener('click', driveSync);
+$('driveQuick').addEventListener('click', driveSync);
 $('wipe').addEventListener('click', function(){
   if (!window.confirm('Wirklich ALLE Tageswerte löschen?')) return;
   if (!window.confirm('Sicher? Das kann nicht rückgängig gemacht werden. Vorher Sicherung gemacht?')) return;
@@ -1489,6 +1592,7 @@ function showTab(t){
   setHeader(false);
   var entEl = $('v-' + t).querySelector('.ent'); if (entEl) entEl.appendChild($('noteCard'));
   $('noteCard').hidden = t === 'lab';
+  var tabEl = $('v-' + t); if (tabEl && t !== 'lab') tabEl.insertBefore($('driveQuick'), tabEl.firstChild);
   renderHeader(); updateComputed(); renderTab();
   window.scrollTo(0, 0);
 }
@@ -1556,7 +1660,7 @@ renderSportChips(); loadDay(cur); showTab(curTab);
 ready.then(function(){ renderSportChips(); renderPlan(); if (!saveTimer) loadDay(cur); else { saveNow(); updateComputed(); } renderTab(); });
 
 // für Tests
-window.__tw = { version: VERSION, ready: function(){ return ready.then(function(){ return writeQ; }); }, days: function(){ return days; }, settings: function(){ return settings; }, labor: function(){ return labor; }, labStats: labStats, labEval: labEval, labParseRef: parseRef, labValNum: labValNum, labArrow: labArrow,
+window.__tw = { version: VERSION, _setClientId: function(c){ DRIVE_CLIENT_ID = c; renderDrive(); }, drive: function(){ return drive; }, driveSync: driveSync, ready: function(){ return ready.then(function(){ return writeQ; }); }, days: function(){ return days; }, settings: function(){ return settings; }, labor: function(){ return labor; }, labStats: labStats, labEval: labEval, labParseRef: parseRef, labValNum: labValNum, labArrow: labArrow,
   cur: function(){ return cur; }, tab: function(){ return curTab; }, view: function(){ return curView; }, showTab: showTab, openMore: openMore, loadDay: loadDay, renderTab: renderTab,
   toCSV: toCSV, toJSON: toJSON, importText: function(t, o){ return importText(t, o).then(function(r){ loadDay(cur); renderTab(); return r; }); }, importFiles: importFiles,
   parseHM: parseHM, parseNumber: parseNumber, bmi: bmiOf, loadOfSession: loadOfSession, dayLoad: dayLoad, sollFor: sollFor,

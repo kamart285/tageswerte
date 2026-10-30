@@ -132,6 +132,10 @@
   .dateBox .d2{font-size:21px}
   nav button{font-size:10.5px;padding:7px 0 9px;letter-spacing:-.1px}
   nav button i{font-size:20px}
+  /* ===== v6: Aus Drive holen ===== */
+  #driveQuick{display:flex;align-items:center;gap:10px;margin:0 0 12px;padding:10px 12px;background:var(--card2);border:1px solid var(--line);border-radius:14px;font:inherit;color:var(--txt);width:100%;text-align:left}
+  #driveQuick b{font-size:16px} #driveQuick .muted{font-size:13px;margin:0;flex:1;text-align:right}
+  #driveFolder{width:100%;font:inherit;font-size:15px;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--card2);color:var(--txt);margin:0 0 10px;box-sizing:border-box}
   /* ===== v5: sieben Tabs ===== */
   nav button{font-size:10px;letter-spacing:-.25px;padding:6px 0 8px;overflow:hidden;text-overflow:clip}
   nav button i{font-size:19px;line-height:1.25}
@@ -225,6 +229,7 @@
 
 <main>
   <div id="tabs"></div>
+  <button type="button" id="driveQuick" hidden><span>☁</span><b>Aus Drive holen</b><span class="muted" id="driveQuickInfo"></span></button>
 
   <div class="card noteC" id="noteCard">
     <h3><span class="ic">📝</span>Sonstiges</h3>
@@ -247,6 +252,14 @@
       <ul id="sportEdit" class="cedit"></ul>
       <div class="addRow"><input id="newSport" type="text" placeholder="Neue Sportart" enterkeyhint="done" autocapitalize="words"><button type="button" id="addSport">＋ Hinzufügen</button></div>
       <p class="muted" style="margin-bottom:0">Erscheinen als Schnellauswahl beim Sport. Umbenennen ändert bereits eingetragene Tage nicht.</p>
+    </div>
+    <h2>Aus Google Drive holen</h2>
+    <div class="card">
+      <p class="muted" style="margin-top:0">Holt die Tagesdateien <b>health_JJJJ-MM-TT.json</b> direkt aus deinem Drive-Ordner „Gesundheit“. Die Daten gehen nur von Drive auf dieses Handy, nirgendwo sonst hin.</p>
+      <input id="driveFolder" type="text" placeholder="Ordner-ID oder Drive-Link des Ordners" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Drive-Ordner">
+      <button class="btn sec" id="driveBtn" type="button">☁ Aus Drive holen</button>
+      <p class="muted" id="driveInfo" style="margin:0"></p>
+      <div id="driveRes"></div>
     </div>
     <h2>Daten laden (Import)</h2>
     <div class="card">
@@ -271,7 +284,7 @@
       <button class="btn sec" id="toLab" type="button" style="margin:0">🩸 Zum Reiter Labor</button>
     </div>
     <button class="btn danger" id="wipe" type="button">Alle Tageswerte löschen</button>
-    <p class="muted" style="text-align:center" id="verLine">Tageswerte · v5 · funktioniert offline</p>
+    <p class="muted" style="text-align:center" id="verLine">Tageswerte · v6 · funktioniert offline</p>
   </section>
 </main>
 
