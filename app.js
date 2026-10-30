@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-var VERSION = 6;
+var VERSION = 7;
 // ===== KONFIGURATION „Aus Drive holen“ (v6) =====
 // OAuth-Client-ID (Typ „Webanwendung“) aus der Google Cloud Console eintragen.
 // Eine Client-ID ist kein Geheimnis (sie steht bei jeder Web-App öffentlich im Code).
@@ -241,7 +241,7 @@ var ENT = {
         + '<p class="sub" style="margin:8px 2px 0">Tendenz = Trend der letzten 14 Tage; im Diagramm als gleitender 7-Tage-Schnitt.</p>')
       + crd('🔥', 'Kalorien', grid('g2', [fi('kOut', 'Verbrauch', 'kcal'), fi('kIn', 'Aufnahme', 'kcal')])
         + '<div style="height:8px"></div>' + grid('g2', [fi('kAct', 'davon aktiv', 'kcal'), '<div class="f"><span class="fl">Defizit</span><div class="cv" id="c-def"><span>–</span></div></div>'])
-        + '<p class="sub" style="margin:8px 2px 0">Aufnahme von Hand eintragen. Verbrauch kommt aus dem Uhr-Import oder von Hand.</p>');
+        + '<p class="sub" style="margin:8px 2px 0">Aufnahme und Verbrauch kommen aus „Aus Drive holen“ oder von Hand.</p>');
   },
   sp: function(){
     return crd('🏋️', 'Sport', '<div id="sportRows"></div><div class="chips" id="sportChips"></div>', '<b id="c-sport"></b>')
@@ -621,9 +621,9 @@ var CH = {
   bp: function(keys, h, todo){
     var mS = sr(keys, 'mS'), mD = sr(keys, 'mD'), aS = sr(keys, 'aS'), aD = sr(keys, 'aD'), mP = sr(keys, 'mP'), aP = sr(keys, 'aP');
     var dS = sr(keys, 'dS'), dD = sr(keys, 'dD');
-    if (any(mS) || any(mD) || any(aS) || any(aD)){
+    if (any(mS) || any(mD) || any(aS) || any(aD) || any(dS) || any(dD)){
       var am = avg(mS), amd = avg(mD), aa = avg(aS), aad = avg(aD);
-      h.s += ccard('ch1', 'Blutdruck (mmHg)', 'Ø morgens ' + b(am == null ? '–' : numG(am) + '/' + numG(amd)) + ' · Ø abends ' + b(aa == null ? '–' : numG(aa) + '/' + numG(aad)), true);
+      h.s += ccard('ch1', 'Blutdruck (mmHg)', 'Ø morgens ' + b(am == null ? '–' : numG(am) + '/' + numG(amd)) + ' · Ø abends ' + b(aa == null ? '–' : numG(aa) + '/' + numG(aad)) + (any(dS) ? ' · Ø Uhr ' + b(numG(avg(dS)) + '/' + numG(avg(dD))) : ''), true);
       var ds = [line('Sys morgens', mS, RED), line('Dia morgens', mD, BLUE), line('Sys abends', aS, '#ffb3c1', { borderDash: [6, 4], pointStyle: 'rectRot' }), line('Dia abends', aD, '#a8d1ff', { borderDash: [6, 4], pointStyle: 'rectRot' })];
       if (any(dS)) ds.push(line('Sys Ø Tag (Uhr)', dS, GREY, { borderDash: [2, 3], borderWidth: 1.5 }), line('Dia Ø Tag (Uhr)', dD, '#b0b6bd', { borderDash: [2, 3], borderWidth: 1.5 }));
       todo.push(['ch1', ds, {}]);
@@ -1250,6 +1250,34 @@ var SPORT_DE = { running: 'Laufen', run: 'Laufen', 'outdoor running': 'Laufen', 
   cycling: 'Radfahren', biking: 'Radfahren', 'indoor cycling': 'Radfahren (drinnen)', swimming: 'Schwimmen', 'pool swimming': 'Schwimmen', rowing: 'Rudern', 'rowing machine': 'Rudergerät',
   elliptical: 'Crosstrainer', 'cross trainer': 'Crosstrainer', 'strength training': 'Krafttraining', 'free training': 'Freies Training', yoga: 'Yoga', boxing: 'Boxen',
   squash: 'Squash', padel: 'Padel', tennis: 'Tennis', badminton: 'Badminton', 'table tennis': 'Tischtennis', football: 'Fußball', soccer: 'Fußball', basketball: 'Basketball' };
+// Health Connect ExerciseSessionRecord.EXERCISE_TYPE_* (Exporter zeigt unbekannte als „Other (NN)“)
+var HC_EX = { 0: 'Training', 2: 'Badminton', 4: 'Baseball', 5: 'Basketball', 8: 'Radfahren', 9: 'Radfahren (drinnen)', 10: 'Bootcamp', 11: 'Boxen', 13: 'Calisthenics', 14: 'Cricket', 16: 'Tanzen',
+  25: 'Crosstrainer', 26: 'Kurs', 27: 'Fechten', 28: 'Football', 29: 'Australian Football', 31: 'Frisbee', 32: 'Golf', 33: 'Atemübung', 34: 'Turnen', 35: 'Handball', 36: 'HIIT', 37: 'Wandern',
+  38: 'Eishockey', 39: 'Eislaufen', 44: 'Kampfsport', 46: 'Paddeln', 47: 'Paragliding', 48: 'Pilates', 50: 'Racquetball', 51: 'Klettern', 52: 'Rollhockey', 53: 'Rudern', 54: 'Rudergerät',
+  55: 'Rugby', 56: 'Laufen', 57: 'Laufband', 58: 'Segeln', 59: 'Tauchen', 60: 'Skaten', 61: 'Skifahren', 62: 'Snowboard', 63: 'Schneeschuhwandern', 64: 'Fußball', 65: 'Softball', 66: 'Squash',
+  68: 'Treppensteigen', 69: 'Stepper', 70: 'Krafttraining', 71: 'Dehnen', 72: 'Surfen', 73: 'Schwimmen (Freiwasser)', 74: 'Schwimmen', 75: 'Tischtennis', 76: 'Tennis', 78: 'Volleyball',
+  79: 'Gehen', 80: 'Wasserball', 81: 'Gewichtheben', 82: 'Rollstuhl', 83: 'Yoga' };
+var SPORT_GENERIC = /^(other|other workout|andere|anderes|sonstiges|workout|training|sport|exercise|unknown)$/i;
+function exName(s){
+  var ty = String(s.sport || s.type || s.exercise_type || s.activity || '').trim(), ti = String(s.title || s.name || '').trim();
+  var m = ty.match(/^(?:other\s*)?\(?\s*(\d{1,3})\s*\)?$/i) || (typeof (s.exercise_type) === 'number' ? [0, s.exercise_type] : null);
+  if (m && HC_EX[+m[1]] && +m[1] !== 0) return HC_EX[+m[1]];
+  if (ty && !SPORT_GENERIC.test(ty) && !m) return sportName(ty);
+  if (ti && !SPORT_GENERIC.test(ti)) return sportName(ti);
+  return 'Training';
+}
+function dedupeSessions(list){   // gleiche Einheit aus mehreren Quellen: Start ±1 Min und ähnliche Dauer
+  var mins = function(x){ return x.st ? +x.st.slice(0, 2) * 60 + +x.st.slice(3) : null; };
+  var score = function(x){ return Object.keys(x).filter(function(k){ return x[k] != null; }).length; };
+  var out = [];
+  list.forEach(function(x){
+    var a = mins(x), j = -1;
+    if (a != null) out.forEach(function(y, i){ var b = mins(y); if (j < 0 && b != null && Math.abs(a - b) <= 1 && (x.m == null || y.m == null || Math.abs(x.m - y.m) <= Math.max(3, 0.15 * Math.max(x.m, y.m)))) j = i; });
+    if (j < 0) out.push(x);
+    else { var y = out[j]; if (score(x) > score(y) || (score(x) === score(y) && (x.m || 0) > (y.m || 0))) out[j] = x; }
+  });
+  return out.sort(function(p, q){ return (p.st || '99').localeCompare(q.st || '99'); });
+}
 function sportName(v){
   var s = String(v == null ? '' : v).trim(); if (!s) return 'Sport';
   var l = s.toLowerCase().replace(/[_-]+/g, ' ');
@@ -1269,7 +1297,7 @@ function hhmm(v){
 }
 function extSession(s){
   if (!s || typeof s !== 'object') return null;
-  var o = { t: sportName(s.sport || s.type || s.exercise_type || s.activity || s.title || s.name) };
+  var o = { t: exName(s) };
   var m = nv(s.duration_min != null ? s.duration_min : s.duration_minutes);
   if (m == null && nv(s.duration_seconds) != null) m = nv(s.duration_seconds) / 60;
   if (m == null && nv(s.duration_s) != null) m = nv(s.duration_s) / 60;
@@ -1299,6 +1327,9 @@ function extToRec(o, dflt){
   put('kAct', sub(o.active_calories != null ? o.active_calories : o.active_kcal, ['total_calories_kcal', 'kcal', 'total', 'value']));
   var dm = sub(o.distance, ['total_distance_meters', 'meters', 'm']), dk = dm != null ? dm / 1000 : (o.distance_km != null ? nv(o.distance_km) : sub(o.distance, ['km', 'total_distance_km']));
   put('dist', dk);
+  var nu = o.nutrition || o.meals;
+  if (Array.isArray(nu)){ var ki = 0, kn = 0; nu.forEach(function(x){ var e = x && (x.energy_kcal != null ? x.energy_kcal : x.kcal != null ? x.kcal : x.calories); e = nv(e); if (e != null && e >= 0){ ki += e; kn++; } }); if (kn) put('kIn', ki); }
+  else if (o.calories_in != null || o.intake_kcal != null) put('kIn', nv(o.calories_in != null ? o.calories_in : o.intake_kcal));
   var bp = o.bp || o.blood_pressure;
   if (bp && typeof bp === 'object'){ put('dS', sub({ v: bp.sys != null ? bp.sys : bp.systolic_mmhg != null ? bp.systolic_mmhg : bp.systolic }, ['v'])); put('dD', sub({ v: bp.dia != null ? bp.dia : bp.diastolic_mmhg != null ? bp.diastolic_mmhg : bp.diastolic }, ['v'])); }
   var sp = sub(o.oxygen_saturation != null ? o.oxygen_saturation : o.spo2, ['percentage', 'percent', 'value']); if (sp != null && sp > 0 && sp <= 1) sp *= 100; put('spo2', sp);
@@ -1308,9 +1339,15 @@ function extToRec(o, dflt){
   if (o.sleep_min != null) sl = nv(o.sleep_min);
   else if (o.sleep_minutes != null) sl = nv(o.sleep_minutes);
   else if (o.sleep != null){ if (typeof o.sleep === 'object'){ sl = sub(o.sleep, ['minutes', 'total_minutes', 'duration_minutes', 'duration_min']); if (sl == null){ var hs = sub(o.sleep, ['hours', 'total_hours']); if (hs != null) sl = hs * 60; } if (sl == null){ var ss = sub(o.sleep, ['seconds', 'total_seconds', 'duration_seconds']); if (ss != null) sl = ss / 60; } } else sl = nv(o.sleep); }
+  if (o.sleep && typeof o.sleep === 'object' && o.sleep.total_duration_minutes != null){   // Health Connect Export: Summe aller Schlaf-Einträge des Tages
+    var tot = nv(o.sleep.total_duration_minutes), stg = o.sleep.sleep_stages || {}, wake = 0;
+    Object.keys(stg).forEach(function(k){ if (/awake|wach|out of bed/i.test(k)) wake += nv(stg[k]) || 0; });
+    sl = tot != null ? tot - wake : null;
+    if (sl != null && (sl < 30 || sl > 960)) sl = null;   // unplausibel (überlappende Einträge mehrerer Quellen): weglassen
+  }
   if (sl != null) put('sleep', Math.round(sl));
   var list = o.sessions || o.exercises || o.exercise_sessions || o.workouts;
-  if (Array.isArray(list)){ var sess = list.map(extSession).filter(Boolean); if (sess.length){ r.sport = sess; r._calc = true; } }
+  if (Array.isArray(list)){ var sess = dedupeSessions(list.map(extSession).filter(Boolean)); if (sess.length){ r.sport = sess; r._calc = true; } }
   if (Object.keys(au).length) r.auto = au;
   return (NUMKEYS.some(function(k){ return r[k] != null; }) || r.sport) ? r : null;
 }
@@ -1376,7 +1413,12 @@ function mergeDays(list, over, res){
       if (!ex.note){ ex.note = r.note; ch = true; }
       else if (ex.note.indexOf(r.note) < 0){ ex.note = ex.note + '\n' + r.note; ch = true; }
     }
-    if (r.sport){ if (mergeSport(ex, r.sport, [])) ch = true; }
+    if (r.sport && r._calc && ex.sport){   // Tagesexport: alte automatische Einheiten ersetzen (Doppelte, alte Namen), eigene bleiben
+      var oldA = JSON.stringify(ex.sport.filter(function(e){ return e.src === 'auto'; }));
+      var keep = ex.sport.filter(function(e){ return e.src !== 'auto'; }), tmp = { sport: keep.slice() };
+      mergeSport(tmp, r.sport, []);
+      if (JSON.stringify((tmp.sport || []).filter(function(e){ return e.src === 'auto'; })) !== oldA || (tmp.sport || []).length !== ex.sport.length){ ex.sport = tmp.sport || []; if (!ex.sport.length) delete ex.sport; ch = true; }
+    } else if (r.sport){ if (mergeSport(ex, r.sport, [])) ch = true; }
     if (r._calc && ex.sport){
       var ist = dayLoad(ex.sport);
       if (ist > 0 && (ex.ist == null || (ex.auto && ex.auto.ist)) && ex.ist !== ist){ ex.ist = ist; setAuto(ex, 'ist', true); ch = true; }
@@ -1467,10 +1509,11 @@ $('impFile').addEventListener('change', function(){
 // ---------- v6: Aus Google Drive holen (nur Browser, kein Server) ----------
 // Gespeichert in meta/'drive' (eigener Schlüssel, IndexedDB bleibt Version 1):
 // { folder, last: ISO, n, latest: 'YYYY-MM-DD', seen: { fileId: modifiedTime } }
-var drive = { folder: '', last: null, n: 0, latest: null, seen: {} };
+var DRIVE_PV = 7;   // Parser-Version: steigt sie, werden alle Drive-Dateien einmal neu gelesen (v7: Kalorien-Aufnahme aus nutrition)
+var drive = { folder: '', last: null, n: 0, latest: null, seen: {}, pv: DRIVE_PV };
 var driveTok = null, driveTokExp = 0, driveBusy = false;
 ready.then(function(){ return tx(['meta'], 'readonly', function(t){ return t.objectStore('meta').get('drive'); }); })
-  .then(function(rq){ var v = rq && rq.result; if (v && typeof v === 'object'){ drive.folder = v.folder || ''; drive.last = v.last || null; drive.n = +v.n || 0; drive.latest = v.latest || null; drive.seen = v.seen && typeof v.seen === 'object' ? v.seen : {}; } renderDrive(); })
+  .then(function(rq){ var v = rq && rq.result; if (v && typeof v === 'object'){ drive.folder = v.folder || ''; drive.last = v.last || null; drive.n = +v.n || 0; drive.latest = v.latest || null; drive.seen = v.seen && typeof v.seen === 'object' ? v.seen : {}; drive.pv = +v.pv || 0; } renderDrive(); })
   .catch(function(){ renderDrive(); });
 function saveDrive(){ var v = JSON.parse(JSON.stringify(drive)); return queue(function(){ return tx(['meta'], 'readwrite', function(t){ t.objectStore('meta').put(v, 'drive'); }); }); }
 function folderIdOf(v){ v = String(v || '').trim(); var m = v.match(/folders\/([A-Za-z0-9_-]{10,})/) || v.match(/[?&]id=([A-Za-z0-9_-]{10,})/); if (m) return m[1]; return /^[A-Za-z0-9_-]{10,}$/.test(v) ? v : ''; }
@@ -1529,7 +1572,8 @@ function driveSync(){
   return driveToken().then(function(tok){
     $('driveInfo').textContent = 'Suche Tagesdateien …';
     return driveList(tok).then(function(files){
-      var todo = files.filter(function(f){ return over || drive.seen[f.id] !== f.modifiedTime; });
+      var stale = (+drive.pv || 0) < DRIVE_PV, errs0 = res.errors.length;
+      var todo = files.filter(function(f){ return over || stale || drive.seen[f.id] !== f.modifiedTime; });
       return todo.reduce(function(p, f, i){ return p.then(function(){
         $('driveInfo').textContent = 'Lade ' + (i + 1) + ' / ' + todo.length + ' …';
         return gget('https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(f.id) + '?alt=media', tok).then(function(r){ return r.text(); })
@@ -1539,6 +1583,7 @@ function driveSync(){
       }); }, Promise.resolve()).then(function(){
         got = files.length;
         drive.last = new Date().toISOString(); drive.n = got;
+        if (res.errors.length === errs0) drive.pv = DRIVE_PV;
         if (files.length) drive.latest = fileDateOf(files[files.length - 1].name);
         return saveDrive();
       });
@@ -1555,7 +1600,7 @@ function driveSync(){
 $('driveFolder').addEventListener('change', function(){
   var v = this.value.trim(), id = v ? folderIdOf(v) : '';
   if (v && !id){ toast('Das ist keine gültige Ordner-ID / kein Ordner-Link', null, true); this.value = drive.folder; return; }
-  if (id !== drive.folder){ drive.folder = id; drive.seen = {}; drive.last = null; drive.n = 0; drive.latest = null; saveDrive(); }
+  if (id !== drive.folder){ drive.folder = id; drive.seen = {}; drive.last = null; drive.n = 0; drive.latest = null; drive.pv = DRIVE_PV; saveDrive(); }
   this.value = id; renderDrive(); toast(id ? '✓ Ordner gespeichert' : '✓ Ordner entfernt');
 });
 $('driveBtn').addEventListener('click', driveSync);
